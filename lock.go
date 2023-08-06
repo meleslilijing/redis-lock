@@ -12,9 +12,9 @@ import (
 
 var (
 	//go:embed script/lua/unlock.lua
-	luaUnlock                string
-	ErrorFailedToPreemptLock = errors.New("抢锁失败")
-	ErrorNotHoldingLock      = errors.New("解锁失败")
+	luaUnlock              string
+	ErrFailedToPreemptLock = errors.New("抢锁失败")
+	ErrorNotHoldingLock    = errors.New("解锁失败")
 )
 
 type Client struct {
@@ -47,7 +47,7 @@ func NewLock(client redis.Cmdable, key string, value string) *Lock {
 
 func (c *Client) TryLock(ctx context.Context, key string, expiration time.Duration) (*Lock, error) {
 	value := c.valuer()
-	ok, err := c.client.SetNX(ctx, key, value, time.Second*10).Result()
+	ok, err := c.client.SetNX(ctx, key, value, expiration).Result()
 
 	if err != nil {
 		return nil, err
@@ -55,7 +55,7 @@ func (c *Client) TryLock(ctx context.Context, key string, expiration time.Durati
 
 	if !ok {
 		// 这个key已经被抢了，所以redis设置不上去
-		return nil, ErrorFailedToPreemptLock
+		return nil, ErrFailedToPreemptLock
 	}
 	return NewLock(c.client, key, value), nil
 }
